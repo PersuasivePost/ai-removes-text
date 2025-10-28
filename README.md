@@ -1,2 +1,3 @@
 # ai-removes-text
-removes ai conflicting texts for coursera like pages
+
+Basically help you complete your assignment quicker :)
