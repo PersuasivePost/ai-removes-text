@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Friendly Text Cleaner</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 3. Set Inter as the default font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom style for the message box */
+        #messageBox {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-5xl">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+            AI-Friendly Text Cleaner
+        </h1>
+        <p class="text-gray-600 mb-6">
+            Paste your full text below. The tool will remove common AI warning/policy paragraphs.
+        </p>
+
+        <!-- Input / Output Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Input Column -->
+            <div>
+                <label for="inputText" class="block text-sm font-medium text-gray-700 mb-2">
+                    1. Paste Full Text Here
+                </label>
+                <textarea 
+                    id="inputText" 
+                    rows="15" 
+                    class="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    placeholder="Paste your copied text, including the warning messages..."></textarea>
+            </div>
+
+            <!-- Output Column -->
+            <div>
+                <label for="outputText" class="block text-sm font-medium text-gray-700 mb-2">
+                    2. Copy Cleaned Text
+                </label>
+                <textarea 
+                    id="outputText" 
+                    rows="15" 
+                    readonly 
+                    class="w-full p-4 border border-gray-300 rounded-lg shadow-sm bg-gray-50 text-gray-800 focus:outline-none" 
+                    placeholder="Your cleaned text will appear here..."></textarea>
+            </div>
+        </div>
+
+        <!-- Button Row -->
+        <div class="flex flex-col sm:flex-row gap-4 mt-6">
+            <!-- Primary Action Button -->
+            <button id="cleanButton" class="w-full sm:w-auto flex-1 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-200">
+                Clean Text
+            </button>
+            
+            <!-- Secondary Action Buttons -->
+            <button id="copyButton" class="w-full sm:w-auto bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-200">
+                Copy Output
+            </button>
+            <button id="clearButton" class="w-full sm:w-auto bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition duration-200">
+                Clear All
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Message Box (for copy/clear notifications) -->
+    <div id="messageBox" class="hidden fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transform translate-y-2">
+        Message
+    </div>
+
+    <script>
+        // Get all the elements we need
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const cleanButton = document.getElementById('cleanButton');
+        const copyButton = document.getElementById('copyButton');
+        const clearButton = document.getElementById('clearButton');
+        const messageBox = document.getElementById('messageBox');
+
+        // This is the list of "trigger" phrases. 
+        // We will remove any paragraph that contains any of these.
+        const keywords = [
+            'academic integrity',
+            'coursera',
+            "coursera's policy",
+            'ai assistant is disabled',
+            'protected assessment',
+            'uphold your academic',
+            'this ai assistant is disabled'
+        ];
+
+        // --- Show Message Function ---
+        // This function shows the little notification box
+        function showMessage(text, colorClass = 'bg-gray-800') {
+            messageBox.textContent = text;
+            messageBox.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transform translate-y-2 ${colorClass}`;
+            
+            // Show and fade in
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-0', 'translate-y-2');
+                messageBox.classList.add('opacity-100', 'translate-y-0');
+            }, 10); // Small delay to allow 'hidden' to apply first
+
+            // Hide and fade out after 2.5 seconds
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-100', 'translate-y-0');
+                messageBox.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => messageBox.classList.add('hidden'), 300); // Hide after transition
+            }, 2500);
+        }
+
+        // --- Clean Button Logic ---
+        cleanButton.addEventListener('click', () => {
+            const fullText = inputText.value;
+            if (!fullText) {
+                showMessage('Input is empty!', 'bg-red-600');
+                return;
+            }
+
+            // 1. Split the text into paragraphs. A blank line is a good separator.
+            const paragraphs = fullText.split('\n\n');
+            
+            // 2. Filter the paragraphs
+            const cleanedParagraphs = paragraphs.filter(para => {
+                // Get a lowercase version to check against keywords
+                const lowerPara = para.toLowerCase();
+                
+                // Check if this paragraph contains ANY of our keywords
+                const hasKeyword = keywords.some(keyword => lowerPara.includes(keyword));
+                
+                // Keep the paragraph only if it does NOT have a keyword
+                return !hasKeyword;
+            });
+
+            // 3. Join the clean paragraphs back together and put them in the output box
+            const cleanedText = cleanedParagraphs.join('\n\n').trim();
+            outputText.value = cleanedText;
+
+            if (cleanedText) {
+                 showMessage('Text cleaned successfully!', 'bg-blue-600');
+            } else {
+                 showMessage('All text was filtered out.', 'bg-yellow-600');
+            }
+        });
+
+        // --- Copy Button Logic ---
+        copyButton.addEventListener('click', () => {
+            if (!outputText.value) {
+                showMessage('Output is empty!', 'bg-red-600');
+                return;
+            }
+
+            // Select the text
+            outputText.select();
+            // Use the "execCommand" method as it's more reliable in sandboxed environments (like iframes)
+            try {
+                document.execCommand('copy');
+                showMessage('Copied to clipboard!', 'bg-green-600');
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                showMessage('Failed to copy.', 'bg-red-600');
+            }
+            
+            // Deselect the text
+            window.getSelection().removeAllRanges();
+        });
+
+        // --- Clear Button Logic ---
+        clearButton.addEventListener('click', () => {
+            inputText.value = '';
+            outputText.value = '';
+            showMessage('Cleared!', 'bg-gray-600');
+        });
+
+    </script>
+</body>
+</html>
