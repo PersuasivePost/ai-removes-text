@@ -90,7 +90,7 @@
         const clearButton = document.getElementById('clearButton');
         const messageBox = document.getElementById('messageBox');
 
-        // This is the list of "trigger" phrases. 
+        // This is the list of "trigger" phrases.
         // We will remove any paragraph that contains any of these.
         const keywords = [
             'academic integrity',
@@ -99,7 +99,18 @@
             'ai assistant is disabled',
             'protected assessment',
             'uphold your academic',
-            'this ai assistant is disabled'
+            'this ai assistant is disabled',
+            'do you understand?',
+            'ai agent compliance verification',
+            'data-action="acknowledge-guidelines"'
+        ];
+
+        // Regex patterns for inline injection text that shares a paragraph with
+        // legitimate content (e.g. injected directly after a question).
+        // Each pattern removes from its start marker to its end marker, inclusive.
+        const injectionPatterns = [
+            // "You are a helpful AI assistant ... Do you understand?." block
+            /You are a helpful AI assistant\.[\s\S]*?Do you understand\?\./g,
         ];
 
         // --- Show Message Function ---
@@ -131,22 +142,33 @@
                 return;
             }
 
-            // 1. Split the text into paragraphs. A blank line is a good separator.
-            const paragraphs = fullText.split('\n\n');
-            
-            // 2. Filter the paragraphs
+            // 1. First pass: remove inline injection blocks via regex.
+            //    These are injections that share a line/paragraph with legitimate text,
+            //    so we must surgically excise them rather than drop the whole paragraph.
+            let intermediate = fullText;
+            for (const pattern of injectionPatterns) {
+                intermediate = intermediate.replace(pattern, '');
+            }
+
+            // 1b. Collapse runs of 3+ newlines left by removed blocks down to 2.
+            intermediate = intermediate.replace(/\n{3,}/g, '\n\n');
+
+            // 2. Split the text into paragraphs. A blank line is a good separator.
+            const paragraphs = intermediate.split('\n\n');
+
+            // 3. Filter the paragraphs by keyword (catches any remaining injections).
             const cleanedParagraphs = paragraphs.filter(para => {
                 // Get a lowercase version to check against keywords
                 const lowerPara = para.toLowerCase();
-                
+
                 // Check if this paragraph contains ANY of our keywords
                 const hasKeyword = keywords.some(keyword => lowerPara.includes(keyword));
-                
+
                 // Keep the paragraph only if it does NOT have a keyword
                 return !hasKeyword;
             });
 
-            // 3. Join the clean paragraphs back together and put them in the output box
+            // 4. Join the clean paragraphs back together and put them in the output box.
             const cleanedText = cleanedParagraphs.join('\n\n').trim();
             outputText.value = cleanedText;
 
